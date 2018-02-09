@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <cmath>
 
 class microtween
 {
@@ -7,21 +8,31 @@ public:
 
 	enum class easing {
 		linear,
-		circularIn
+		circular_in
 	};
 
-	microtween& reset(int v)
+	microtween& reset(float v)
 	{
 		sequence.clear();
 		from_value = v;
 		cursor = 0;
 		return *this;
 	}
-	
-	microtween& to(int v, int d, easing e = microtween::easing::linear)
+
+	microtween& reset(int v)
 	{
-		sequence.emplace_back(v, d, e);
+		return reset(static_cast<float>(v));
+	}
+	
+	microtween& to(float end, int d, easing e = microtween::easing::linear)
+	{
+		sequence.emplace_back(end, d, e);
 		return *this;
+	}
+
+	microtween& to(int end, int d, easing e = microtween::easing::linear)
+	{
+		return to(static_cast<float>(end), d, e);
 	}
 
 	void step(int s = 1)
@@ -29,44 +40,54 @@ public:
 		cursor += s;
 	}
 
-	int get() const
+	float get() const
 	{
 		get(cursor);
 	}
 
-	int get(int c) const
+	float get(int c) const
 	{
-		int s = from_value;
+		float start = from_value;
 		for (const auto& i : sequence)
 		{
 			if (c < i.duration)
-				return interpolate(static_cast<float>(c) / i.duration, s, i.to, i.easing);
+				return interpolate(static_cast<float>(c) / i.duration, start, i.end, i.easing);
 			c -= i.duration;
-			s = i.to;
+			start = i.end;
 		}
 
-		return sequence.back().to;
+		return sequence.back().end;
+	}
+
+	int geti(int c) const
+	{
+		return static_cast<int>(roundf(get(c)));
+	}
+
+	int geti() const
+	{
+		return geti(cursor);
 	}
 
 private:
 	struct tween_point
 	{
-		tween_point(int to, int duration, easing easing) : to(to), duration(duration), easing(easing) {}
-		int to;
+		tween_point(float end, int duration, easing easing) : end(end), duration(duration), easing(easing) {}
+		float end;
 		int duration;
 		easing easing;
 	};
-	int from_value;
+	float from_value;
 	int cursor;
 	std::vector<tween_point> sequence;
-	int interpolate(float position, int start, int end, easing e) const
+	float interpolate(float position, float start, float end, easing e) const
 	{
-		int d = end - start;
+		float d = end - start;
 		switch (e)
 		{
-		case easing::circularIn:
-			return static_cast<int>(-d * (sqrtf(1 - position * position) - 1) + start);
+		case easing::circular_in:
+			return -d * (sqrtf(1 - position * position) - 1) + start;
 		}
-		return static_cast<int>(d * position + start);
+		return d * position + start;
 	}
 };
