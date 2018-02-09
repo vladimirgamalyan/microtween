@@ -70,7 +70,11 @@ public:
 		for (const auto& i : sequence)
 		{
 			if (c < i.duration)
-				return interpolate(static_cast<float>(c) / i.duration, start, i.end, i.easing);
+			{
+				float d = i.end - start;
+				float position = static_cast<float>(c) / i.duration;
+				return d * interpolate(position, i.easing) + start;
+			}
 			c -= i.duration;
 			start = i.end;
 		}
@@ -99,139 +103,135 @@ private:
 	float from_value;
 	int cursor;
 	std::vector<tween_point> sequence;
-	float interpolate(float position, float start, float end, easing e) const
+	float interpolate(float position, easing e) const
 	{
 		const float PI_F = 3.14159265358979f;
-		float d = end - start;
 		switch (e)
 		{
 		case easing::quadratic_in:
-			return d * position * position + start;
+			return position * position;
 
 		case easing::quadratic_out:
-			return -d * position * (position - 2) + start;
+			return -1.f * position * (position - 2);
 
 		case easing::quadratic_in_out:
 			position *= 2;
 			if (position < 1)
-				return (d / 2) * position * position + start;
+				return .5f * position * position;
 			--position;
-			return (-d / 2) * (position * (position - 2) - 1) + start;
+			return -.5f * (position * (position - 2) - 1);
 
 		case easing::cubic_in:
-			return d * position * position * position + start;
+			return position * position * position;
 
 		case easing::cubic_out:
 			--position;
-			return d * (position * position * position + 1) + start;
+			return position * position * position + 1;
 
 		case easing::cubic_in_out:
 			position *= 2;
 			if (position < 1)
-				return (d / 2) * position * position * position + start;
+				return .5f * position * position * position;
 			position -= 2;
-			return (d / 2) * (position * position * position + 2) + start;
+			return .5f * (position * position * position + 2);
 
 		case easing::quartic_in:
-			return d * position * position * position * position + start;
+			return position * position * position * position;
 
 		case easing::quartic_out:
 			--position;
-			return -d * (position * position * position * position - 1) + start;
+			return -(position * position * position * position - 1);
 
 		case easing::quartic_in_out:
 			position *= 2;
 			if (position < 1)
-				return (d / 2) * (position * position * position * position) + start;
+				return .5f * (position * position * position * position);
 			position -= 2;
-			return (-d / 2) * (position * position * position * position - 2) + start;
+			return -.5f * (position * position * position * position - 2);
 
 		case easing::exponential_in:
-			return d * powf(2, 10 * (position - 1)) + start;
+			return powf(2, 10 * (position - 1));
 
 		case easing::exponential_out:
-			return d * (-powf(2, -10 * position) + 1) + start;
+			return -powf(2, -10 * position) + 1;
 
 		case easing::exponential_in_out:
 			position *= 2;
-			if (position < 1) {
-				return (d / 2) * powf(2, 10 * (position - 1)) + start;
-			}
+			if (position < 1)
+				return .5f * powf(2, 10 * (position - 1));
 			--position;
-			return (d / 2) * (-powf(2, -10 * position) + 2) + start;
+			return .5f * (-powf(2, -10 * position) + 2);
 
 		case easing::circular_in:
-			return -d * (sqrtf(1 - position * position) - 1) + start;
+			return -(sqrtf(1 - position * position) - 1);
 
 		case easing::circular_out:
 			--position;
-			return d * (sqrtf(1 - position * position)) + start;
+			return sqrtf(1 - position * position);
 
 		case easing::circular_in_out:
 			position *= 2;
 			if (position < 1)
-				return (-d / 2) * (sqrtf(1 - position * position) - 1) + start;
+				return -.5f * (sqrtf(1 - position * position) - 1);
 			position -= 2;
-			return (d / 2) * (sqrtf(1 - position * position) + 1) + start;
+			return .5f * (sqrtf(1 - position * position) + 1);
 
 		case easing::elastic_in:
 		{
 			if (position <= 0.00001f)
-				return start;
+				return 0.f;
 			if (position >= 0.999f)
-				return end;
+				return 1.f;
 			float p = .3f;
 			float s = p / 4;
-			float postFix =
-				d * powf(2, 10 * (position -= 1)); // this is a fix, again, with post-increment operators
-			return -(postFix * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p)) + start;
+			float postFix = powf(2, 10 * (position -= 1)); // this is a fix, again, with post-increment operators
+			return -(postFix * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p));
 		}
 
 		case easing::elastic_out:
 		{
 			if (position <= 0.00001f)
-				return start;
+				return 0.f;
 			if (position >= 0.999f)
-				return end;
+				return 1.f;
 			float p = .3f;
 			float s = p / 4;
-			return d * powf(2, -10 * position) * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p) + end;
+			return powf(2, -10 * position) * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p) + 1.f;
 		}
 
 		case easing::elastic_in_out:
 		{
 			if (position <= 0.00001f)
-				return start;
+				return 0.f;
 			if (position >= 0.999f)
-				return end;
+				return 1.f;
 			position *= 2;
 			float p = (.3f * 1.5f);
 			float s = p / 4;
 			float postFix;
 			if (position < 1)
 			{
-				postFix = d * powf(2, 10 * (position -= 1));
-				return -0.5f * (postFix * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p)) + start;
+				postFix = powf(2, 10 * (position -= 1));
+				return -0.5f * (postFix * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p));
 			}
-			postFix = d * powf(2, -10 * (position -= 1));
-			return postFix * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p) * .5f + end;
+			postFix = powf(2, -10 * (position -= 1));
+			return postFix * sinf((position - s) * (2 * static_cast<float>(PI_F)) / p) * .5f + 1.f;
 		}
 
 		case easing::back_in:
 		{
 			float s = 1.70158f;
-			return d * position * position * ((s + 1) * position - s) + start;
+			return position * position * ((s + 1) * position - s);
 		}
 
 		case easing::back_out:
 		{
 			float s = 1.70158f;
 			position -= 1;
-			return d * ((position)* position * ((s + 1) * position + s) + 1) + start;
+			return (position)* position * ((s + 1) * position + s) + 1;
 		}
 
 		}
-		return d * position + start;
+		return position;
 	}
 };
-
