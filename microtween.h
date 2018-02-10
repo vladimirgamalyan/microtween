@@ -27,7 +27,8 @@ public:
 		elastic_out,
 		elastic_in_out,
 		back_in,
-		back_out
+		back_out,
+		back_in_out
 	};
 
 	microtween& reset(float v)
@@ -229,6 +230,17 @@ private:
 			float s = 1.70158f;
 			position -= 1;
 			return (position)* position * ((s + 1) * position + s) + 1;
+		}
+
+		case easing::back_in_out:
+		{
+			float s = 1.70158f;
+			float t = position;
+			s *= 1.525f;
+			if ((t /= .5f) < 1)
+				return .5f * (t * t * (((s)+1) * t - s));
+			float postFix = t -= 2;
+			return .5f * ((postFix)* t * (((s)+1) * t + s) + 2);
 		}
 
 		}
