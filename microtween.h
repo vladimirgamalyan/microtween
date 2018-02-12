@@ -71,11 +71,7 @@ public:
 		for (const auto& i : sequence)
 		{
 			if (c < i.duration)
-			{
-				float d = i.end - start;
-				float position = static_cast<float>(c) / i.duration;
-				return d * interpolate(position, i.easing) + start;
-			}
+				return start + (i.end - start) * interpolate(static_cast<float>(c) / i.duration, i.easing);
 			c -= i.duration;
 			start = i.end;
 		}
@@ -234,13 +230,12 @@ private:
 
 		case easing::back_in_out:
 		{
-			float s = 1.70158f;
+			float s = 1.70158f * 1.525f;
 			float t = position;
-			s *= 1.525f;
 			if ((t /= .5f) < 1)
-				return .5f * (t * t * (((s)+1) * t - s));
+				return .5f * (t * t * ((s + 1) * t - s));
 			float postFix = t -= 2;
-			return .5f * ((postFix)* t * (((s)+1) * t + s) + 2);
+			return .5f * ((postFix)* t * ((s + 1) * t + s) + 2);
 		}
 
 		}
