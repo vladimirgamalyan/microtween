@@ -67,6 +67,9 @@ public:
 
 	float get(int c) const
 	{
+		if (sequence.empty())
+			return from_value;
+		
 		float start = from_value;
 		for (const auto& i : sequence)
 		{
