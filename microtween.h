@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <cmath>
+#include <functional>
 
 class microtween
 {
@@ -31,6 +32,8 @@ public:
 		back_in_out
 	};
 
+	typedef std::function<void(void)> cb_t;
+
 	microtween& reset(float v)
 	{
 		sequence.clear();
@@ -43,7 +46,7 @@ public:
 	{
 		return reset(static_cast<float>(v));
 	}
-	
+
 	microtween& to(float end, int d, easing e = microtween::easing::linear)
 	{
 		sequence.emplace_back(end, d, e);
@@ -55,8 +58,34 @@ public:
 		return to(static_cast<float>(end), d, e);
 	}
 
+	microtween& wait(int d)
+	{
+		float end = from_value;
+		if (!sequence.empty())
+			end = sequence.back().end;
+		return to(end, d);
+	}
+
+	microtween& call(const cb_t& cb)
+	{
+		sequence.back().cb = cb;
+		return *this;
+	}
+
 	void step(int s = 1)
 	{
+		int c = cursor;
+		for (const auto& i : sequence)
+		{
+			if (c < i.duration)
+			{
+				if (i.cb && c + s >= i.duration)
+					i.cb();
+				break;
+			}
+			c -= i.duration;
+		}
+
 		cursor += s;
 	}
 
@@ -69,7 +98,7 @@ public:
 	{
 		if (sequence.empty())
 			return from_value;
-		
+
 		float start = from_value;
 		for (const auto& i : sequence)
 		{
@@ -92,16 +121,32 @@ public:
 		return geti(cursor);
 	}
 
+	int duration() const
+	{
+		int result = 0;
+		for (const auto& i : sequence)
+			result += i.duration;
+		return result;
+	}
+
+	bool finished() const
+	{
+		return cursor >= duration();
+	}
+
 private:
 	struct tween_point
 	{
-		tween_point(float end, int duration, easing easing) : end(end), duration(duration), easing(easing) {}
+		tween_point(float end, int duration, easing easing) : end(end),
+			duration(duration), easing(easing) {}
 		float end;
 		int duration;
 		easing easing;
+		cb_t cb;
 	};
-	float from_value;
-	int cursor;
+
+	float from_value = 0;
+	int cursor = 0;
 	std::vector<tween_point> sequence;
 	float interpolate(float position, easing e) const
 	{
@@ -228,7 +273,7 @@ private:
 		{
 			float s = 1.70158f;
 			position -= 1;
-			return (position)* position * ((s + 1) * position + s) + 1;
+			return (position)*position * ((s + 1) * position + s) + 1;
 		}
 
 		case easing::back_in_out:
@@ -238,7 +283,7 @@ private:
 			if ((t /= .5f) < 1)
 				return .5f * (t * t * ((s + 1) * t - s));
 			float postFix = t -= 2;
-			return .5f * ((postFix)* t * ((s + 1) * t + s) + 2);
+			return .5f * ((postFix)*t * ((s + 1) * t + s) + 2);
 		}
 
 		}
